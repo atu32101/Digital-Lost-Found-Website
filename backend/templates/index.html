@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <section class="hero">
+    <div class="heroInner">
+      <h1 class="heroTitle">Digital Lost & Found</h1>
+      <p class="heroSubtitle">Post what you lost, report what you found, and connect with the right person fast.</p>
+    </div>
+  </section>
+
+  <section class="filters">
+    <div class="filterRow">
+      <label>
+        Keyword
+        <input type="text" id="keyword" placeholder="e.g., wallet, phone" />
+      </label>
+      <label>
+        Category
+        <input type="text" id="category" placeholder="e.g., electronics" />
+      </label>
+      <label>
+        Status
+        <select id="status">
+          <option value="">All</option>
+          <option value="unclaimed">Unclaimed</option>
+          <option value="claimed">Claimed</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="filterRow filterActions">
+      <label class="switchGroup">
+        <input type="radio" name="type" value="lost" checked />
+        Lost
+      </label>
+      <label class="switchGroup">
+        <input type="radio" name="type" value="found" />
+        Found
+      </label>
+
+      <button class="btn" id="btnSearch">Search</button>
+      <button class="btn btnSecondary" id="btnReset">Reset</button>
+    </div>
+  </section>
+
+  <section class="itemsSection">
+    <div class="sectionHeader">
+      <h2 id="sectionTitle">Lost Items</h2>
+    </div>
+    <div id="itemsGrid" class="grid"></div>
+    <div id="emptyState" class="emptyState" style="display: none">
+      No items found.
+    </div>
+  </section>
+{% endblock %}
+
+{% block page_script %}
+  <script>
+    async function loadItems() {
+      const type = document.querySelector('input[name="type"]:checked').value;
+      const sectionTitle = document.getElementById("sectionTitle");
+      sectionTitle.textContent = type === "lost" ? "Lost Items" : "Found Items";
+
+      const keyword = document.getElementById("keyword").value.trim();
+      const category = document.getElementById("category").value.trim();
+      const status = document.getElementById("status").value;
+
+      const endpoint = type === "lost" ? "/api/lost-items" : "/api/found-items";
+      const params = new URLSearchParams();
+      if (keyword) params.set("keyword", keyword);
+      if (category) params.set("category", category);
+      if (status) params.set("status", status);
+
+      const res = await fetch(endpoint + (params.toString() ? "?" + params.toString() : ""), {
+        method: "GET",
+        headers: { "Content-Type": "application/json" }
+      });
+      const data = await res.json();
+
+      const grid = document.getElementById("itemsGrid");
+      const empty = document.getElementById("emptyState");
+      grid.innerHTML = "";
+
+      const items = data.items || [];
+      empty.style.display = items.length ? "none" : "block";
+
+      if (!items.length) return;
+
+      for (const item of items) {
+        const card = document.createElement("div");
+        card.className = "card";
+        card.innerHTML = `
+          <div class="cardMedia">
+            ${item.image_url ? `<img src="${item.image_url}" alt="${item.title}" />` : `<div class="noImage">No image</div>`}
+          </div>
+          <div class="cardBody">
+            <h3 class="cardTitle">${escapeHtml(item.title)}</h3>
+            ${item.category ? `<div class="meta"><b>Category:</b> ${escapeHtml(item.category)}</div>` : ""}
+            ${item.location ? `<div class="meta"><b>Location:</b> ${escapeHtml(item.location)}</div>` : ""}
+            ${item.date ? `<div class="meta"><b>Date:</b> ${escapeHtml(item.date)}</div>` : ""}
+            <div class="meta">
+              <b>Status:</b>
+              ${item.status === "claimed" ? '<span class="badge badgeClaimed">Claimed</span>' : '<span class="badge badgeUnclaimed">Unclaimed</span>'}
+            </div>
+            ${item.description ? `<p class="desc">${escapeHtml(item.description)}</p>` : ""}
+            <div class="contactBox">
+              <div>
+                <b>Contact Email:</b>
+                ${item.contact_email ? `<a href="mailto:${encodeURIComponent(item.contact_email)}">${escapeHtml(item.contact_email)}</a>` : "-"}
+              </div>
+              <div>
+                <b>Contact Phone:</b>
+                ${item.contact_phone ? `<a href="tel:${encodeURIComponent(item.contact_phone)}">${escapeHtml(item.contact_phone)}</a>` : "-"}
+              </div>
+            </div>
+          </div>
+        `;
+        grid.appendChild(card);
+      }
+    }
+
+    function escapeHtml(text) {
+      return String(text ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    document.getElementById("btnSearch").addEventListener("click", loadItems);
+    document.getElementById("btnReset").addEventListener("click", () => {
+      document.getElementById("keyword").value = "";
+      document.getElementById("category").value = "";
+      document.getElementById("status").value = "";
+      loadItems();
+    });
+
+    // Auto-load on first visit
+    loadItems();
+  </script>
+{% endblock %}
+

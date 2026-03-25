@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h1 class="pageTitle">Admin Panel</h1>
+
+  <div id="adminError" class="formMsg" style="display:none;color:#b00020;"></div>
+
+  <section class="itemsSection">
+    <div class="sectionHeader">
+      <h2>All Lost Items</h2>
+    </div>
+    <div id="adminLostGrid" class="grid"></div>
+    <div id="adminLostEmpty" class="emptyState" style="display:none;">No lost items.</div>
+  </section>
+
+  <section class="itemsSection">
+    <div class="sectionHeader">
+      <h2>All Found Items</h2>
+    </div>
+    <div id="adminFoundGrid" class="grid"></div>
+    <div id="adminFoundEmpty" class="emptyState" style="display:none;">No found items.</div>
+  </section>
+{% endblock %}
+
+{% block page_script %}
+  <script>
+    function authHeaders() {
+      const token = localStorage.getItem("access_token");
+      if (!token) return {};
+      return { "Authorization": "Bearer " + token };
+    }
+
+    function escapeHtml(text) {
+      return String(text ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    async function fetchAdminList() {
+      const token = localStorage.getItem("access_token");
+      if (!token) {
+        window.location.href = "/login";
+        return;
+      }
+
+      const resLost = await fetch("/api/admin/lost-items", {
+        method: "GET",
+        headers: { ...authHeaders(), "Content-Type": "application/json" }
+      });
+      const resFound = await fetch("/api/admin/found-items", {
+        method: "GET",
+        headers: { ...authHeaders(), "Content-Type": "application/json" }
+      });
+
+      const lostData = await resLost.json();
+      const foundData = await resFound.json();
+
+      if (!resLost.ok) {
+        const box = document.getElementById("adminError");
+        box.style.display = "block";
+        box.textContent = lostData.error || "Failed to load lost items.";
+        return;
+      }
+      if (!resFound.ok) {
+        const box = document.getElementById("adminError");
+        box.style.display = "block";
+        box.textContent = foundData.error || "Failed to load found items.";
+        return;
+      }
+
+      const lost = lostData.items || [];
+      const found = foundData.items || [];
+
+      const lostGrid = document.getElementById("adminLostGrid");
+      const foundGrid = document.getElementById("adminFoundGrid");
+      const lostEmpty = document.getElementById("adminLostEmpty");
+      const foundEmpty = document.getElementById("adminFoundEmpty");
+      lostGrid.innerHTML = "";
+      foundGrid.innerHTML = "";
+
+      lostEmpty.style.display = lost.length ? "none" : "block";
+      foundEmpty.style.display = found.length ? "none" : "block";
+
+      for (const item of lost) {
+        lostGrid.appendChild(makeAdminCard(item, "lost"));
+      }
+      for (const item of found) {
+        foundGrid.appendChild(makeAdminCard(item, "found"));
+      }
+    }
+
+    function makeAdminCard(item, type) {
+      const card = document.createElement("div");
+      card.className = "card";
+      const deleteEndpoint = type === "lost" ? `/api/admin/lost-items/${item.id}` : `/api/admin/found-items/${item.id}`;
+      card.innerHTML = `
+        <div class="cardMedia">
+          ${item.image_url ? `<img src="${item.image_url}" alt="${item.title}" />` : `<div class="noImage">No image</div>`}
+        </div>
+        <div class="cardBody">
+          <h3 class="cardTitle">${escapeHtml(item.title)}</h3>
+          ${item.category ? `<div class="meta"><b>Category:</b> ${escapeHtml(item.category)}</div>` : ""}
+          ${item.location ? `<div class="meta"><b>Location:</b> ${escapeHtml(item.location)}</div>` : ""}
+          ${item.date ? `<div class="meta"><b>Date:</b> ${escapeHtml(item.date)}</div>` : ""}
+          <div class="meta">
+            <b>Status:</b>
+            ${item.status === "claimed" ? '<span class="badge badgeClaimed">Claimed</span>' : '<span class="badge badgeUnclaimed">Unclaimed</span>'}
+          </div>
+          ${item.description ? `<p class="desc">${escapeHtml(item.description)}</p>` : ""}
+          <div class="contactBox">
+            <div>
+              <b>Contact Email:</b>
+              ${item.contact_email ? `<a href="mailto:${encodeURIComponent(item.contact_email)}">${escapeHtml(item.contact_email)}</a>` : "-"}
+            </div>
+            <div>
+              <b>Contact Phone:</b>
+              ${item.contact_phone ? `<a href="tel:${encodeURIComponent(item.contact_phone)}">${escapeHtml(item.contact_phone)}</a>` : "-"}
+            </div>
+          </div>
+          <div class="cardActions">
+            <button class="btn btnDanger" data-delete="${deleteEndpoint}">Delete</button>
+          </div>
+        </div>
+      `;
+
+      card.querySelector("[data-delete]").addEventListener("click", async (e) => {
+        const endpoint = e.target.getAttribute("data-delete");
+        if (!confirm("Delete this post?")) return;
+
+        const res = await fetch(endpoint, {
+          method: "DELETE",
+          headers: { ...authHeaders(), "Content-Type": "application/json" }
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          const box = document.getElementById("adminError");
+          box.style.display = "block";
+          box.textContent = data.error || "Delete failed.";
+          return;
+        }
+        await fetchAdminList();
+      });
+
+      return card;
+    }
+
+    fetchAdminList();
+  </script>
+{% endblock %}
+

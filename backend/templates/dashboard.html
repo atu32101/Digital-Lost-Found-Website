@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h1 class="pageTitle">Your Dashboard</h1>
+
+  <div id="dashError" class="formMsg" style="display:none;color:#b00020;"></div>
+
+  <section class="itemsSection">
+    <div class="sectionHeader">
+      <h2>My Lost Items</h2>
+    </div>
+    <div id="lostGrid" class="grid"></div>
+    <div id="lostEmpty" class="emptyState" style="display:none;">No lost items yet.</div>
+  </section>
+
+  <section class="itemsSection">
+    <div class="sectionHeader">
+      <h2>My Found Items</h2>
+    </div>
+    <div id="foundGrid" class="grid"></div>
+    <div id="foundEmpty" class="emptyState" style="display:none;">No found items yet.</div>
+  </section>
+{% endblock %}
+
+{% block page_script %}
+  <script>
+    function authHeaders() {
+      const token = localStorage.getItem("access_token");
+      if (!token) return {};
+      return { "Authorization": "Bearer " + token };
+    }
+
+    function escapeHtml(text) {
+      return String(text ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    async function loadDashboard() {
+      const token = localStorage.getItem("access_token");
+      if (!token) {
+        window.location.href = "/login";
+        return;
+      }
+
+      const res = await fetch("/api/me/dashboard", {
+        method: "GET",
+        headers: { ...authHeaders(), "Content-Type": "application/json" }
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        const box = document.getElementById("dashError");
+        box.style.display = "block";
+        box.textContent = data.error || "Failed to load dashboard.";
+        return;
+      }
+
+      const lost = data.lost_items || [];
+      const found = data.found_items || [];
+
+      const lostGrid = document.getElementById("lostGrid");
+      const foundGrid = document.getElementById("foundGrid");
+      const lostEmpty = document.getElementById("lostEmpty");
+      const foundEmpty = document.getElementById("foundEmpty");
+      lostGrid.innerHTML = "";
+      foundGrid.innerHTML = "";
+
+      lostEmpty.style.display = lost.length ? "none" : "block";
+      foundEmpty.style.display = found.length ? "none" : "block";
+
+      for (const item of lost) {
+        lostGrid.appendChild(makeCard(item, "lost"));
+      }
+      for (const item of found) {
+        foundGrid.appendChild(makeCard(item, "found"));
+      }
+    }
+
+    function makeCard(item, type) {
+      const card = document.createElement("div");
+      card.className = "card";
+
+      const isClaimed = item.status === "claimed";
+      const actionLabel = isClaimed ? "Mark Unclaimed" : "Mark Claimed";
+      const nextStatus = isClaimed ? "unclaimed" : "claimed";
+
+      card.innerHTML = `
+        <div class="cardMedia">
+          ${item.image_url ? `<img src="${item.image_url}" alt="${item.title}" />` : `<div class="noImage">No image</div>`}
+        </div>
+        <div class="cardBody">
+          <h3 class="cardTitle">${escapeHtml(item.title)}</h3>
+          ${item.category ? `<div class="meta"><b>Category:</b> ${escapeHtml(item.category)}</div>` : ""}
+          ${item.location ? `<div class="meta"><b>Location:</b> ${escapeHtml(item.location)}</div>` : ""}
+          ${item.date ? `<div class="meta"><b>Date:</b> ${escapeHtml(item.date)}</div>` : ""}
+          <div class="meta">
+            <b>Status:</b>
+            ${isClaimed
+              ? '<span class="badge badgeClaimed">Claimed</span>'
+              : '<span class="badge badgeUnclaimed">Unclaimed</span>'}
+          </div>
+          ${item.description ? `<p class="desc">${escapeHtml(item.description)}</p>` : ""}
+
+          <div class="contactBox">
+            <div>
+              <b>Contact Email:</b>
+              ${item.contact_email ? `<a href="mailto:${encodeURIComponent(item.contact_email)}">${escapeHtml(item.contact_email)}</a>` : "-"}
+            </div>
+            <div>
+              <b>Contact Phone:</b>
+              ${item.contact_phone ? `<a href="tel:${encodeURIComponent(item.contact_phone)}">${escapeHtml(item.contact_phone)}</a>` : "-"}
+            </div>
+          </div>
+
+          <div class="cardActions">
+            <button class="btn btnSecondary" data-nextstatus="${nextStatus}" data-type="${type}" data-id="${item.id}">
+              ${actionLabel}
+            </button>
+          </div>
+        </div>
+      `;
+
+      card.querySelector("button").addEventListener("click", async (e) => {
+        const btn = e.target;
+        const status = btn.getAttribute("data-nextstatus");
+        const t = btn.getAttribute("data-type");
+        const id = btn.getAttribute("data-id");
+
+        const endpoint = t === "lost" ? `/api/lost-items/${id}/status` : `/api/found-items/${id}/status`;
+        const res = await fetch(endpoint, {
+          method: "POST",
+          headers: { ...authHeaders(), "Content-Type": "application/json" },
+          body: JSON.stringify({ status })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          const box = document.getElementById("dashError");
+          box.style.display = "block";
+          box.textContent = data.error || "Status update failed.";
+          return;
+        }
+        await loadDashboard();
+      });
+
+      return card;
+    }
+
+    loadDashboard();
+  </script>
+{% endblock %}
+

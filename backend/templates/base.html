@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ title or "Digital Lost & Found" }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <a href="/" class="brandLink">Digital Lost & Found</a>
+      </div>
+      <nav class="nav">
+        <a href="/report/lost">Report Lost</a>
+        <a href="/report/found">Report Found</a>
+        <a href="/dashboard" id="navDashboard">Dashboard</a>
+        <a href="/admin" id="navAdmin">Admin</a>
+        <a href="/login" id="navLogin">Login</a>
+        <a href="#" id="navLogout" style="display:none;">Logout</a>
+        <span id="navUser" class="navUser" style="display:none;"></span>
+      </nav>
+    </header>
+
+    <main class="container">
+      {% block content %}{% endblock %}
+    </main>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script>
+      // Simple UI gating based on whether a JWT exists.
+      const token = localStorage.getItem('access_token');
+      const navLogin = document.getElementById('navLogin');
+      const navDashboard = document.getElementById('navDashboard');
+      const navAdmin = document.getElementById('navAdmin');
+      const navLogout = document.getElementById('navLogout');
+      const navUser = document.getElementById('navUser');
+
+      if (!token) {
+        if (navDashboard) navDashboard.style.display = 'none';
+        if (navAdmin) navAdmin.style.display = 'none';
+        if (navLogin) navLogin.style.display = 'inline-block';
+        if (navLogout) navLogout.style.display = 'none';
+        if (navUser) navUser.style.display = 'none';
+      } else {
+        if (navDashboard) navDashboard.style.display = 'inline-block';
+        if (navAdmin) navAdmin.style.display = 'inline-block';
+        if (navLogin) navLogin.style.display = 'none';
+        if (navLogout) navLogout.style.display = 'inline-block';
+        if (navUser) navUser.style.display = 'inline-block';
+
+        // Validate token and show username (if token is invalid, clear it).
+        fetch("/api/auth/me", {
+          method: "GET",
+          headers: { "Authorization": "Bearer " + token }
+        })
+          .then(async (res) => {
+            if (!res.ok) throw new Error("Invalid token");
+            return res.json();
+          })
+          .then((data) => {
+            if (!navUser) return;
+            const username = (data.user && data.user.username) ? data.user.username : "";
+            navUser.textContent = username ? "Hi, " + username : "";
+          })
+          .catch(() => {
+            localStorage.removeItem("access_token");
+            window.location.href = "/";
+          });
+      }
+
+      if (navLogout) {
+        navLogout.addEventListener('click', (e) => {
+          e.preventDefault();
+          localStorage.removeItem('access_token');
+          window.location.href = '/';
+        });
+      }
+    </script>
+    {% block page_script %}{% endblock %}
+  </body>
+</html>
+

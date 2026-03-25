@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h1 class="pageTitle">Login</h1>
+  <form id="loginForm" class="formCard">
+    <label>
+      Email
+      <input type="email" name="email" required />
+    </label>
+    <label>
+      Password
+      <input type="password" name="password" required minlength="6" />
+    </label>
+    <button class="btn" type="submit">Login</button>
+    <div id="loginMsg" class="formMsg" role="alert"></div>
+    <div class="formLinks">
+      <a href="/register">Create an account</a>
+    </div>
+  </form>
+{% endblock %}
+
+{% block page_script %}
+  <script>
+    document.getElementById("loginForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const form = e.target;
+
+      const payload = {
+        email: form.email.value.trim(),
+        password: form.password.value
+      };
+
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+
+      const msg = document.getElementById("loginMsg");
+      if (!res.ok) {
+        msg.textContent = data.error || "Login failed.";
+        return;
+      }
+
+      localStorage.setItem("access_token", data.access_token);
+      window.location.href = "/";
+    });
+  </script>
+{% endblock %}
+

@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h1 class="pageTitle">Report a Lost Item</h1>
+
+  <form id="lostForm" class="formCard" enctype="multipart/form-data">
+    <label>
+      Title
+      <input type="text" name="title" required />
+    </label>
+    <label>
+      Description
+      <textarea name="description" rows="4" placeholder="Add details (size, color, brand, etc.)"></textarea>
+    </label>
+    <label>
+      Date
+      <input type="date" name="date" required />
+    </label>
+    <label>
+      Location
+      <input type="text" name="location" />
+    </label>
+    <label>
+      Category
+      <input type="text" name="category" />
+    </label>
+    <label>
+      Contact Email
+      <input type="email" name="contact_email" />
+    </label>
+    <label>
+      Contact Phone
+      <input type="text" name="contact_phone" />
+    </label>
+    <label>
+      Image
+      <input type="file" name="image" accept="image/*" />
+    </label>
+
+    <button class="btn" type="submit">Submit</button>
+    <div id="lostMsg" class="formMsg" role="alert"></div>
+  </form>
+{% endblock %}
+
+{% block page_script %}
+  <script>
+    function authHeaders() {
+      const token = localStorage.getItem("access_token");
+      if (!token) return {};
+      return { "Authorization": "Bearer " + token };
+    }
+
+    document.getElementById("lostForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const token = localStorage.getItem("access_token");
+      const msg = document.getElementById("lostMsg");
+
+      if (!token) {
+        msg.textContent = "Please login first.";
+        window.location.href = "/login";
+        return;
+      }
+
+      const form = e.target;
+      const formData = new FormData(form);
+
+      const res = await fetch("/api/lost-items", {
+        method: "POST",
+        headers: authHeaders(),
+        body: formData
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        msg.textContent = data.error || "Submission failed.";
+        return;
+      }
+
+      window.location.href = "/";
+    });
+  </script>
+{% endblock %}
+

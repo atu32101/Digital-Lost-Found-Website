@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h1 class="pageTitle">Register</h1>
+  <form id="registerForm" class="formCard">
+    <label>
+      Username
+      <input type="text" name="username" required minlength="3" />
+    </label>
+    <label>
+      Email
+      <input type="email" name="email" required />
+    </label>
+    <label>
+      Password
+      <input type="password" name="password" required minlength="6" />
+    </label>
+    <button class="btn" type="submit">Create Account</button>
+    <div id="registerMsg" class="formMsg" role="alert"></div>
+    <div class="formLinks">
+      <a href="/login">Already have an account?</a>
+    </div>
+  </form>
+{% endblock %}
+
+{% block page_script %}
+  <script>
+    document.getElementById("registerForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const form = e.target;
+
+      const payload = {
+        username: form.username.value.trim(),
+        email: form.email.value.trim(),
+        password: form.password.value
+      };
+
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+
+      const msg = document.getElementById("registerMsg");
+      if (!res.ok) {
+        msg.textContent = data.error || "Registration failed.";
+        return;
+      }
+
+      msg.textContent = data.message || "Registered successfully. You can login now.";
+      window.location.href = "/login";
+    });
+  </script>
+{% endblock %}
+
