@@ -1,0 +1,52 @@
+[
+  {
+    "id": 1,
+    "title": "Lost AirPods Pro ✨",
+    "description": "White AirPods Pro case lost near Canteen during lunch. Important for online classes! Blue light blinking when opened.",
+    "category": "lost",
+    "location": "Canteen Area",
+    "date": "2024-03-30",
+    "contact": "+91 98765 43210 | airpods@college.edu",
+    "image": null
+  },
+  {
+    "id": 2,
+    "title": "Found Leather Wallet 💳",
+    "description": "Black leather wallet containing ID cards and ~₹500 cash. Found under Library gate bench.",
+    "category": "found",
+    "location": "Library Gate",
+    "date": "2024-03-30",
+    "contact": "+91 91234 56789",
+    "image": null
+  },
+  {
+    "id": 3,
+    "title": "Lost Data Structures Notes 📚",
+    "description": "Blue hardcover notebook (200+ pages handwritten DS notes). Reward ₹200 if returned safely!",
+    "category": "lost",
+    "location": "Lecture Hall B-101",
+    "date": "2024-03-29",
+    "contact": "+91 99887 76655 | ds.notes@college.edu",
+    "image": null
+  },
+  {
+    "id": 4,
+    "title": "Found Dell Laptop Charger ⚡",
+    "description": "65W Dell charger (round tip) found plugged in Computer Lab 2 socket.",
+    "category": "found",
+    "location": "Computer Lab 2",
+    "date": "2024-03-30",
+    "contact": "lab2@college.edu | Ext: 456",
+    "image": null
+  },
+  {
+    "id": 5,
+    "title": "Lost Student ID Card 🆔",
+    "description": "College ID #CS2024-045 lost during basketball game. Red lanyard.",
+    "category": "lost",
+    "location": "Sports Ground",
+    "date": "2024-03-30",
+    "contact": "cs045@college.edu",
+    "image": null
+  }
+]
